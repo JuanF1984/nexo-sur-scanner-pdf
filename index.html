@@ -75,20 +75,22 @@
 
   /* CAMERA SCREEN */
   #screen-camera{background:#000}
-  #video{width:100%;height:100%;object-fit:cover;display:block}
-  .camera-overlay{position:absolute;inset:0;pointer-events:none}
-  .camera-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);width:75%;aspect-ratio:.707;border:2px solid rgba(255,255,255,.3);border-radius:4px}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:0}
+  .camera-overlay{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;justify-content:space-between}
+  .camera-guide{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);width:75%;aspect-ratio:.707;border:2px solid rgba(255,255,255,.3);border-radius:4px;pointer-events:none;z-index:2}
   .camera-guide::before,.camera-guide::after{content:'';position:absolute;width:20px;height:20px;border-color:var(--accent);border-style:solid}
   .camera-guide::before{top:-2px;left:-2px;border-width:3px 0 0 3px}
   .camera-guide::after{top:-2px;right:-2px;border-width:3px 3px 0 0}
-  .cam-bottom{position:absolute;bottom:0;left:0;right:0;padding:24px 24px 40px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(transparent,rgba(0,0,0,.8))}
-  .shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;transition:transform .1s}
+  .cam-bottom{position:relative;z-index:3;padding:24px 24px 48px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(transparent,rgba(0,0,0,.85))}
+  .shutter{width:72px;height:72px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.4);cursor:pointer;transition:transform .1s;-webkit-appearance:none;appearance:none;outline:none}
   .shutter:active{transform:scale(.93)}
-  .shutter-ring{width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.6);position:absolute;animation:pulse-ring 2s ease-out infinite}
+  .shutter-ring{width:72px;height:72px;border-radius:50%;border:3px solid rgba(255,255,255,.6);position:absolute;animation:pulse-ring 2s ease-out infinite;pointer-events:none}
   @keyframes pulse-ring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.4);opacity:0}}
-  .cam-top{position:absolute;top:0;left:0;right:0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.6),transparent)}
-  .flash-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;cursor:pointer}
+  .cam-top{position:relative;z-index:3;padding:52px 18px 16px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(rgba(0,0,0,.7),transparent)}
+  .flash-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;cursor:pointer;-webkit-appearance:none}
   .flash-btn.on{background:var(--warn);color:#000;border-color:var(--warn)}
+  .cam-btn-icon{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.25);color:#fff;font-size:0;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-appearance:none;outline:none}
+  .cam-btn-icon:active{transform:scale(.92);background:rgba(255,255,255,.2)}
 
   /* CROP SCREEN */
   #screen-crop{background:#111}
@@ -176,6 +178,10 @@
         Exportar PDF
       </button>
       <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="display:none">Borrar todo</button>
+      <button class="btn btn-secondary" id="btn-install" onclick="installPWA()" style="display:none">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Instalar app
+      </button>
       <p class="pages-count" id="pages-count"></p>
     </div>
   </div>
@@ -191,19 +197,21 @@
   <div class="camera-overlay">
     <div class="cam-top">
       <button class="flash-btn" id="flash-btn" onclick="toggleFlash()">⚡ Flash</button>
-      <button class="btn-icon" onclick="goHome()" style="background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.2);color:#fff">✕</button>
+      <button class="cam-btn-icon" onclick="goHome()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="camera-guide"></div>
     <div class="cam-bottom">
-      <button class="btn-icon" onclick="document.getElementById('file-input').click()" style="background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.2);color:#fff">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
+      <button class="cam-btn-icon" onclick="document.getElementById('file-input').click()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>
       </button>
       <div style="position:relative;display:flex;align-items:center;justify-content:center">
         <div class="shutter-ring"></div>
         <button class="shutter" id="shutter" onclick="capturePhoto()"></button>
       </div>
-      <button class="btn-icon" onclick="switchCamera()" style="background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.2);color:#fff">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+      <button class="cam-btn-icon" onclick="switchCamera()">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
       </button>
     </div>
   </div>
@@ -813,6 +821,32 @@ function hideLoader() { document.getElementById('loader').classList.remove('show
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ─── PWA ─────────────────────────────────────────────────
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('btn-install').style.display = '';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  document.getElementById('btn-install').style.display = 'none';
+  toast('App instalada correctamente');
+});
+
+function installPWA() {
+  if (!deferredInstallPrompt) {
+    toast('Usá "Agregar a pantalla de inicio" en el menú del navegador');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.then(() => {
+    deferredInstallPrompt = null;
+    document.getElementById('btn-install').style.display = 'none';
+  });
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(()=>{});
 }

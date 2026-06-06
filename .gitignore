@@ -1,0 +1,28 @@
+# Dependencias
+node_modules/
+
+# Archivos generados por Vite
+dist/
+
+# Cache
+.vite/
+
+# Variables de entorno
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Configuración de VS Code (opcional)
+.vscode/*
+!.vscode/extensions.json

@@ -112,8 +112,6 @@
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 8px rgba(0,212,170,.4)}
   .adjust-actions{display:flex;gap:10px;padding:0 18px 32px;flex-shrink:0}
   .adjust-actions .btn{flex:1}
-  .sliders-section{transition:opacity .2s}
-  .sliders-section.disabled{opacity:.3;pointer-events:none}
   .export-summary{padding:18px;color:var(--muted);font-size:14px;text-align:center}
   .export-summary strong{color:var(--text);font-weight:600}
   .success-content{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;gap:18px;text-align:center}
@@ -350,7 +348,7 @@ let cvLoading = false;
 // ─── OPENCV LAZY LOAD ────────────────────────────────────
 function setCVBadge(state, text) {
   const b = document.getElementById('cv-badge');
-  b.style.display = '';
+  b.style.display = 'none';
   b.className = state;
   b.textContent = '● ' + text;
 }
@@ -838,14 +836,12 @@ function prepareExport() {
   stopCamera();
   adjustCanvas = document.getElementById('canvas-adjust');
   adjustCtx    = adjustCanvas.getContext('2d', { willReadFrequently: true });
-  document.getElementById('export-summary').innerHTML = `<strong>${pages.length}</strong> p&aacute;gina${pages.length > 1 ? 's' : ''} lista${pages.length > 1 ? 's' : ''} para exportar`;
+  document.getElementById('export-summary').innerHTML = `<strong>${pages.length}</strong> p&aacute;gina${pages.length > 1 ? 's' : ''} lista${pages.length > 1 ? 's' : ''} para exportar<br>El filtro se aplicar&aacute; a todo el documento`;
+  currentFilter = 'original';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === currentFilter));
   showScreen('screen-export');
   const img = new Image();
-  img.onload = () => {
-    currentFilter = analyzeHistogram(img);
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === currentFilter));
-    updateExportPreview(img);
-  };
+  img.onload = () => updateExportPreview(img);
   img.src = pages[0].dataUrl;
 }
 
@@ -867,36 +863,11 @@ function analyzeHistogram(source) {
   return selected;
 }
 
-function resetSliders() {
-  ['sl-brightness','sl-contrast','sl-saturation','sl-sharpen'].forEach(id => {
-    document.getElementById(id).value = 0;
-  });
-  updateLabels();
-}
-
-function updateSlidersVisibility() {
-  document.getElementById('sliders-section').classList.toggle('disabled', currentFilter !== 'original');
-}
-
-function resetAdjust() {
-  currentFilter = 'original';
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === 'original'));
-  resetSliders();
-  updateSlidersVisibility();
-  updateAdjust();
-}
-
 function setFilter(btn) {
   currentFilter = btn.dataset.filter;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   updateExportPreview();
-}
-
-function updateLabels() {
-  ['brightness','contrast','saturation','sharpen'].forEach(id => {
-    document.getElementById('lbl-'+id).textContent = document.getElementById('sl-'+id).value;
-  });
 }
 
 function updateExportPreview(preloadedImage) {
@@ -1134,10 +1105,10 @@ function savePage() {
   showLoader('Guardando...');
   setTimeout(() => {
     try {
-      const dataUrl = croppedCanvas.toDataURL('image/jpeg', 0.95);
+      const dataUrl = croppedCanvas.toDataURL('image/png');
       const thumb   = croppedCanvas.toDataURL('image/jpeg', 0.3);
 
-      pages.push({ dataUrl, thumb, fmt: 'JPEG' });
+      pages.push({ dataUrl, thumb, fmt: 'PNG' });
       hideLoader();
       showAddPageSheet();
     } catch(e) {
@@ -1149,9 +1120,9 @@ function savePage() {
 }
 
 // ─── ADD PAGE SHEET ──────────────────────────────────────
-function showAddPageSheet() {
+function showAddPageSheet(title) {
   const sheet = document.getElementById('add-page-sheet');
-  document.getElementById('sheet-title').textContent = `Página ${pages.length} guardada`;
+  document.getElementById('sheet-title').textContent = title || `Página ${pages.length} guardada`;
   document.getElementById('sheet-sub-options').classList.remove('open');
   document.getElementById('sheet-add-btn-chevron').style.transform = '';
   sheet.style.display = '';
@@ -1170,6 +1141,15 @@ function toggleAddPageOptions() {
   const opening = !sub.classList.contains('open');
   sub.classList.toggle('open');
   chevron.style.transform = opening ? 'rotate(180deg)' : '';
+}
+
+function newDocument() {
+  pages = [];
+  croppedCanvas = null;
+  cropPoints = null;
+  currentFilter = 'original';
+  updateHomeUI();
+  goHome();
 }
 
 // ─── HOME UI ─────────────────────────────────────────────

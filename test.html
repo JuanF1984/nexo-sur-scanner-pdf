@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Test botones</title>
+<style>
+  body{margin:0;background:#0f1117;color:#fff;font-family:sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px;gap:16px}
+  h1{margin:0;font-size:18px}
+  .log{width:100%;max-width:340px;background:#1a1d27;border:1px solid #2e3147;border-radius:10px;padding:12px;font-size:13px;min-height:120px;font-family:monospace;white-space:pre-wrap;word-break:break-all}
+  button{width:100%;max-width:340px;padding:18px;font-size:16px;font-weight:600;border-radius:12px;border:none;cursor:pointer}
+  .b1{background:#00d4aa;color:#000}
+  .b2{background:#0098ff;color:#fff}
+  .b3{background:#ff4f6b;color:#fff}
+  video{width:100%;max-width:340px;height:200px;background:#000;border-radius:10px;object-fit:cover}
+</style>
+</head>
+<body>
+  <h1>Test de eventos</h1>
+  <div class="log" id="log">Tocá los botones, deberían loguear acá...</div>
+
+  <button class="b1" id="btn1">Botón 1 (sin video)</button>
+  <button class="b2" id="btn2">Botón 2 (sin video)</button>
+
+  <video id="video" autoplay playsinline muted></video>
+
+  <button class="b3" id="btn3">Botón 3 (con cámara activa)</button>
+  <button class="b3" id="btn4">Botón 4 (con cámara activa)</button>
+
+<script>
+const log = document.getElementById('log');
+function L(msg) {
+  const t = new Date().toLocaleTimeString();
+  log.textContent = `[${t}] ${msg}\n` + log.textContent;
+}
+
+['btn1','btn2','btn3','btn4'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('click',      () => L(`${id} CLICK`));
+  el.addEventListener('pointerup',  () => L(`${id} POINTERUP`));
+  el.addEventListener('touchend',   () => L(`${id} TOUCHEND`));
+});
+
+(async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }, audio: false
+    });
+    document.getElementById('video').srcObject = stream;
+    L('Cámara OK');
+  } catch(e) {
+    L('Error cámara: ' + e.message);
+  }
+})();
+</script>
+</body>
+</html>

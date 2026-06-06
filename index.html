@@ -169,7 +169,7 @@
       <div class="logo-mark"></div>
       <span class="topbar-title">NexoScanner</span>
     </div>
-    <span class="topbar-brand">por Nexosur</span>
+    <span class="topbar-brand">por NexoSurDigital</span>
   </div>
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:0">
     <div class="gallery" id="gallery">
@@ -1338,7 +1338,15 @@ function installPWA() {
 }
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(registration => registration.update())
+    .catch(() => {});
 }
 
 updateHomeUI();

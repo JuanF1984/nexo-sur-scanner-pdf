@@ -348,7 +348,6 @@ let facingMode = 'environment';
 let torchOn = false;
 let cvReady = false;
 let cvLoading = false;
-
 // ─── OPENCV LAZY LOAD ────────────────────────────────────
 function setCVBadge(state, text) {
   const b = document.getElementById('cv-badge');
@@ -442,10 +441,15 @@ async function openCamera() {
   try {
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: {
+        facingMode,
+        width: { ideal: 4000 },
+        height: { ideal: 3000 }
+      },
       audio: false
     });
-    document.getElementById('video').srcObject = stream;
+    const video = document.getElementById('video');
+    video.srcObject = stream;
   } catch(e) {
     toast('No se pudo acceder a la cámara');
     goHome();
@@ -1288,6 +1292,7 @@ async function exportPDF() {
   await delay(100);
   try {
     const { jsPDF } = window.jspdf;
+    const pdfJpegQuality = 0.85;
     let doc = null;
     for (let i = 0; i < pages.length; i++) {
       showLoader(`Procesando página ${i+1} de ${pages.length}...`);
@@ -1302,7 +1307,7 @@ async function exportPDF() {
       const isDocFilter = currentFilter === 'document';
       const exportMime = isDocFilter ? 'image/png' : 'image/jpeg';
       const exportFmt = isDocFilter ? 'PNG' : 'JPEG';
-      const exportDataUrl = pageCanvas.toDataURL(exportMime, isDocFilter ? undefined : 0.95);
+      const exportDataUrl = pageCanvas.toDataURL(exportMime, isDocFilter ? undefined : pdfJpegQuality);
       const iW = pageCanvas.width, iH = pageCanvas.height;
       const isLandscape = iW > iH;
       const pdfW = isLandscape ? 297 : 210;

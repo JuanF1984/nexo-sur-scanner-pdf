@@ -190,6 +190,10 @@
       </div>
     </div>
     <div class="home-cta">
+      <button class="btn btn-secondary" id="btn-install" onclick="installPWA()" style="display:none;margin-bottom:18px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Instalar app
+      </button>
       <button class="btn btn-primary" id="btn-scan" onclick="startCamera()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="4"/><path d="M9 2h6l2 2h3a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h3z"/></svg>
         <span id="btn-scan-label">Escanear documento</span>
@@ -204,10 +208,6 @@
         Finalizar documento
       </button>
       <button class="btn btn-danger" id="btn-clear" onclick="clearAll()" style="display:none">Borrar todo</button>
-      <button class="btn btn-secondary" id="btn-install" onclick="installPWA()" style="display:none">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v13M8 11l4 4 4-4"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-        Instalar app
-      </button>
       <p class="pages-count" id="pages-count"></p>
     </div>
   </div>

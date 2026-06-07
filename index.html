@@ -397,6 +397,8 @@ function loadOpenCV() {
 
 // ─── SCREEN NAV ──────────────────────────────────────────
 function showScreen(id) {
+  console.log('[Screen] showScreen called', { id, stack: new Error().stack });
+  diagnosticToast(`showScreen: ${id}`);
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
@@ -476,6 +478,8 @@ async function toggleFlash() {
 }
 
 function capturePhoto() {
+  console.log('[Crop trace] capturePhoto called', { stack: new Error().stack });
+  diagnosticToast('Crop trace: capturePhoto()');
   const video = document.getElementById('video');
   const c = document.getElementById('canvas-capture');
   c.width = video.videoWidth;
@@ -487,6 +491,13 @@ function capturePhoto() {
 
 // ─── FILE INPUT ──────────────────────────────────────────
 function handleFileInput(e) {
+  console.log('[Crop trace] handleFileInput called', {
+    targetId: e.target?.id || null,
+    parentId: e.target?.parentElement?.id || null,
+    files: e.target?.files?.length || 0,
+    stack: new Error().stack
+  });
+  diagnosticToast(`Crop trace: handleFileInput files=${e.target?.files?.length || 0} parent=${e.target?.parentElement?.id || 'sin-id'}`);
   console.log('[FilePicker] change', { files: e.target.files.length });
   const file = e.target.files[0];
   if (!file) return;
@@ -501,6 +512,12 @@ let cropCanvas, cropCtx, cropImg, imgW, imgH, scale;
 let dragging = -1;
 
 async function loadImageForCrop(dataUrl) {
+  console.log('[Crop trace] loadImageForCrop called', {
+    hasDataUrl: !!dataUrl,
+    dataUrlPrefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 32) : null,
+    stack: new Error().stack
+  });
+  diagnosticToast(`Crop trace: loadImageForCrop dataUrl=${!!dataUrl}`);
   showLoader('Cargando procesador...');
   try {
     await loadOpenCV();
@@ -521,6 +538,13 @@ async function loadImageForCrop(dataUrl) {
 }
 
 function initCrop() {
+  console.log('[Crop trace] initCrop called', {
+    hasCropImg: !!cropImg,
+    cropImgWidth: cropImg?.width,
+    cropImgHeight: cropImg?.height,
+    stack: new Error().stack
+  });
+  diagnosticToast(`Crop trace: initCrop img=${cropImg?.width || 'sin'}x${cropImg?.height || 'sin'}`);
   cropCanvas = document.getElementById('canvas-crop');
   cropCtx = cropCanvas.getContext('2d');
   const wrap = document.querySelector('.crop-canvas-wrap');
@@ -659,6 +683,14 @@ function rotateImage() {
 }
 
 function renderCrop() {
+  console.log('[Crop trace] renderCrop called', {
+    hasCropImg: !!cropImg,
+    hasCropPoints: !!cropPoints,
+    imgW,
+    imgH,
+    stack: new Error().stack
+  });
+  diagnosticToast(`Crop trace: renderCrop img=${!!cropImg} points=${!!cropPoints}`);
   cropCtx.clearRect(0, 0, imgW, imgH);
   cropCtx.drawImage(cropImg, 0, 0, imgW, imgH);
   cropCtx.fillStyle = 'rgba(0,0,0,.45)';
@@ -1343,6 +1375,13 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+let diagnosticToastDelay = 0;
+function diagnosticToast(msg) {
+  console.log('[Diagnostic toast]', msg);
+  setTimeout(() => toast(msg), diagnosticToastDelay);
+  diagnosticToastDelay += 1200;
+  setTimeout(() => { diagnosticToastDelay = 0; }, diagnosticToastDelay + 300);
+}
 function showLoader(msg) {
   document.getElementById('loader-text').textContent = msg || 'Procesando...';
   document.getElementById('loader').classList.add('show');
@@ -1354,53 +1393,97 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
   console.log('[PWA install] beforeinstallprompt fired', e);
+  diagnosticToast('PWA: beforeinstallprompt fired');
   e.preventDefault(); deferredInstallPrompt = e;
   console.log('[PWA install] deferredInstallPrompt saved', deferredInstallPrompt);
+  diagnosticToast('PWA: deferredInstallPrompt guardado');
   document.getElementById('btn-install').style.display = '';
 });
 window.addEventListener('appinstalled', () => {
   console.log('[PWA install] appinstalled fired');
+  diagnosticToast('PWA: appinstalled fired');
   deferredInstallPrompt = null;
   document.getElementById('btn-install').style.display = 'none';
   toast('App instalada correctamente');
 });
 function installPWA() {
   console.log('[PWA install] install button clicked');
+  diagnosticToast('PWA: installPWA() ejecutada');
+  console.log('[PWA install] installPWA() called', {
+    activeElementId: document.activeElement?.id || null,
+    activeElementTag: document.activeElement?.tagName || null,
+    btnInstallDisplay: getComputedStyle(document.getElementById('btn-install')).display,
+    stack: new Error().stack
+  });
   console.log('[PWA install] deferredInstallPrompt:', deferredInstallPrompt);
   if (!deferredInstallPrompt) {
     console.log('[PWA install] deferredInstallPrompt is null');
-    toast('Diagnostico: deferredInstallPrompt es null');
+    diagnosticToast('PWA: deferredInstallPrompt es null');
     toast('Usá "Agregar a pantalla de inicio" en el menú del navegador');
     return;
   }
   console.log('[PWA install] deferredInstallPrompt exists');
-  toast('Diagnostico: deferredInstallPrompt existe');
+  diagnosticToast('PWA: deferredInstallPrompt existe');
   try {
     console.log('[PWA install] calling prompt()');
-    toast('Diagnostico: ejecutando prompt()');
+    diagnosticToast('PWA: ejecutando prompt()');
     deferredInstallPrompt.prompt();
   } catch (e) {
     console.error('[PWA install] prompt() failed', e);
-    toast('Diagnostico: prompt() fallo');
+    diagnosticToast('PWA: prompt() fallo');
     throw e;
   }
   deferredInstallPrompt.userChoice.then(choice => {
     console.log('[PWA install] userChoice resolved', choice);
     if (choice && choice.outcome === 'accepted') {
       console.log('[PWA install] userChoice outcome: accepted');
-      toast('Diagnostico: userChoice accepted');
+      diagnosticToast('PWA: userChoice accepted');
     } else if (choice && choice.outcome === 'dismissed') {
       console.log('[PWA install] userChoice outcome: dismissed');
-      toast('Diagnostico: userChoice dismissed');
+      diagnosticToast('PWA: userChoice dismissed');
     } else {
       console.log('[PWA install] userChoice outcome:', choice?.outcome);
-      toast('Diagnostico: userChoice sin outcome conocido');
+      diagnosticToast(`PWA: userChoice outcome=${choice?.outcome || 'desconocido'}`);
     }
     deferredInstallPrompt = null;
     document.getElementById('btn-install').style.display = 'none';
   }).catch(e => {
     console.error('[PWA install] userChoice failed', e);
-    toast('Diagnostico: userChoice fallo');
+    diagnosticToast('PWA: userChoice fallo');
+  });
+}
+
+const installButtonForDiagnostics = document.getElementById('btn-install');
+if (installButtonForDiagnostics) {
+  installButtonForDiagnostics.addEventListener('touchstart', e => {
+    console.log('[PWA install] btn-install touchstart', {
+      targetId: e.target?.id || null,
+      targetTag: e.target?.tagName || null,
+      currentTargetId: e.currentTarget?.id || null,
+      pointerEvents: getComputedStyle(e.currentTarget).pointerEvents
+    });
+    diagnosticToast(`PWA: btn-install touchstart target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
+  }, { passive: true });
+  installButtonForDiagnostics.addEventListener('click', e => {
+    console.log('[PWA install] btn-install click listener capture', {
+      targetId: e.target?.id || null,
+      targetTag: e.target?.tagName || null,
+      currentTargetId: e.currentTarget?.id || null,
+      defaultPrevented: e.defaultPrevented,
+      eventPhase: e.eventPhase,
+      stack: new Error().stack
+    });
+    diagnosticToast(`PWA: btn-install click capture target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
+  }, true);
+  installButtonForDiagnostics.addEventListener('click', e => {
+    console.log('[PWA install] btn-install click listener bubble', {
+      targetId: e.target?.id || null,
+      targetTag: e.target?.tagName || null,
+      currentTargetId: e.currentTarget?.id || null,
+      defaultPrevented: e.defaultPrevented,
+      eventPhase: e.eventPhase
+    });
+    diagnosticToast(`PWA: btn-install click bubble target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
   });
 }
 

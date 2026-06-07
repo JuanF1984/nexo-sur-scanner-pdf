@@ -490,7 +490,7 @@ function capturePhoto() {
   c.height = video.videoHeight;
   c.getContext('2d').drawImage(video, 0, 0);
   stopCamera();
-  loadImageForCrop(c.toDataURL('image/jpeg', .92));
+  loadImageForCrop(c.toDataURL('image/jpeg', .92), 'capturePhoto');
 }
 
 // ─── FILE INPUT ──────────────────────────────────────────
@@ -540,7 +540,7 @@ function handleFileInput(e) {
   }
   if (!file) { e.target.value = ''; return; }
   const reader = new FileReader();
-  reader.onload = ev => { stopCamera(); loadImageForCrop(ev.target.result); };
+  reader.onload = ev => { stopCamera(); loadImageForCrop(ev.target.result, 'FileReader.onload'); };
   reader.readAsDataURL(file);
   e.target.value = '';
 }
@@ -549,15 +549,24 @@ function handleFileInput(e) {
 let cropCanvas, cropCtx, cropImg, imgW, imgH, scale;
 let dragging = -1;
 
-async function loadImageForCrop(dataUrl) {
+async function loadImageForCrop(dataUrl, origin) {
+  const stack = new Error().stack || '';
+  const stackLines = stack.split('\n').slice(1, 6).map(line => line.trim()).join(' <= ');
+  const callerMatch = stack.split('\n')[2]?.trim().match(/at\s+([^\s(]+)/);
+  const inferredCaller = callerMatch ? callerMatch[1] : 'desconocido';
   updateDebugIndicator('loadImageForCrop()', {
     hasDataUrl: !!dataUrl,
-    prefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 24) : null
+    prefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 24) : null,
+    origin: origin || 'sin-origin',
+    caller: origin || inferredCaller,
+    stack: stackLines
   });
   console.log('[Crop trace] loadImageForCrop called', {
     hasDataUrl: !!dataUrl,
     dataUrlPrefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 32) : null,
-    stack: new Error().stack
+    origin: origin || null,
+    inferredCaller,
+    stack
   });
   showLoader('Cargando procesador...');
   try {
@@ -1408,7 +1417,7 @@ function updateDebugIndicator(eventName, details) {
   const detailText = details
     ? Object.entries(details)
         .filter(([, value]) => value !== undefined && value !== null)
-        .map(([key, value]) => `${key}=${value}`)
+        .map(([key, value]) => key === 'stack' ? `\n   stack=${value}` : `${key}=${value}`)
         .join(' | ')
     : '';
   debugEvents.unshift(`${now} - ${eventName}${detailText ? ' - ' + detailText : ''}`);

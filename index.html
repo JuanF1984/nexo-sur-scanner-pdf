@@ -120,6 +120,7 @@
 
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:24px;font-size:14px;transition:transform .3s;z-index:999;white-space:nowrap}
   .toast.show{transform:translateX(-50%) translateY(0)}
+  .debug-indicator{position:fixed;left:8px;right:8px;bottom:8px;z-index:10000;background:rgba(0,0,0,.86);border:1px solid #ffb84f;color:#fff;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;pointer-events:none;white-space:pre-wrap}
 
   .loader-overlay{position:fixed;inset:0;background:rgba(15,17,23,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:998;opacity:0;pointer-events:none;transition:opacity .2s}
   .loader-overlay.show{opacity:1;pointer-events:all}
@@ -303,6 +304,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="debug-indicator" id="debug-indicator">Último evento: esperando...</div>
 <div class="loader-overlay" id="loader"><div class="spinner"></div><div class="loader-text" id="loader-text">Procesando...</div></div>
 <div id="cv-badge" class="loading" style="display:none">&#9679; cargando OpenCV...</div>
 
@@ -401,7 +403,7 @@ function loadOpenCV() {
 // ─── SCREEN NAV ──────────────────────────────────────────
 function showScreen(id) {
   console.log('[Screen] showScreen called', { id, stack: new Error().stack });
-  diagnosticToast(`showScreen: ${id}`);
+  updateDebugIndicator('showScreen()', { id });
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
 }
@@ -481,8 +483,6 @@ async function toggleFlash() {
 }
 
 function capturePhoto() {
-  console.log('[Crop trace] capturePhoto called', { stack: new Error().stack });
-  diagnosticToast('Crop trace: capturePhoto()');
   const video = document.getElementById('video');
   const c = document.getElementById('canvas-capture');
   c.width = video.videoWidth;
@@ -504,10 +504,14 @@ function allowNextFileInput(source) {
     console.log('[FileInput guard] permission expired', { source });
   }, 15000);
   console.log('[FileInput guard] allow next file input', { source });
-  diagnosticToast(`FileInput guard: permitido ${source}`);
 }
 
 function handleFileInput(e) {
+  updateDebugIndicator('handleFileInput()', {
+    allowed: allowFileInput,
+    parentId: e.target?.parentElement?.id || 'sin-id',
+    files: e.target?.files?.length || 0
+  });
   if (!allowFileInput) {
     console.warn('[FileInput guard] unexpected file input ignored', {
       targetId: e.target?.id || null,
@@ -515,7 +519,6 @@ function handleFileInput(e) {
       files: e.target?.files?.length || 0,
       stack: new Error().stack
     });
-    diagnosticToast(`FileInput guard: ignorado parent=${e.target?.parentElement?.id || 'sin-id'}`);
     e.target.value = '';
     return;
   }
@@ -526,7 +529,6 @@ function handleFileInput(e) {
     allowedSource: allowedFileInputSource,
     stack: new Error().stack
   });
-  diagnosticToast(`Crop trace: handleFileInput files=${e.target?.files?.length || 0} source=${allowedFileInputSource || 'sin-source'}`);
   console.log('[FilePicker] change', { files: e.target.files.length });
   const file = e.target.files[0];
   allowFileInput = false;
@@ -547,12 +549,15 @@ let cropCanvas, cropCtx, cropImg, imgW, imgH, scale;
 let dragging = -1;
 
 async function loadImageForCrop(dataUrl) {
+  updateDebugIndicator('loadImageForCrop()', {
+    hasDataUrl: !!dataUrl,
+    prefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 24) : null
+  });
   console.log('[Crop trace] loadImageForCrop called', {
     hasDataUrl: !!dataUrl,
     dataUrlPrefix: typeof dataUrl === 'string' ? dataUrl.slice(0, 32) : null,
     stack: new Error().stack
   });
-  diagnosticToast(`Crop trace: loadImageForCrop dataUrl=${!!dataUrl}`);
   showLoader('Cargando procesador...');
   try {
     await loadOpenCV();
@@ -573,13 +578,6 @@ async function loadImageForCrop(dataUrl) {
 }
 
 function initCrop() {
-  console.log('[Crop trace] initCrop called', {
-    hasCropImg: !!cropImg,
-    cropImgWidth: cropImg?.width,
-    cropImgHeight: cropImg?.height,
-    stack: new Error().stack
-  });
-  diagnosticToast(`Crop trace: initCrop img=${cropImg?.width || 'sin'}x${cropImg?.height || 'sin'}`);
   cropCanvas = document.getElementById('canvas-crop');
   cropCtx = cropCanvas.getContext('2d');
   const wrap = document.querySelector('.crop-canvas-wrap');
@@ -718,14 +716,6 @@ function rotateImage() {
 }
 
 function renderCrop() {
-  console.log('[Crop trace] renderCrop called', {
-    hasCropImg: !!cropImg,
-    hasCropPoints: !!cropPoints,
-    imgW,
-    imgH,
-    stack: new Error().stack
-  });
-  diagnosticToast(`Crop trace: renderCrop img=${!!cropImg} points=${!!cropPoints}`);
   cropCtx.clearRect(0, 0, imgW, imgH);
   cropCtx.drawImage(cropImg, 0, 0, imgW, imgH);
   cropCtx.fillStyle = 'rgba(0,0,0,.45)';
@@ -1410,12 +1400,14 @@ function toast(msg) {
   t.textContent = msg; t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
-let diagnosticToastDelay = 0;
-function diagnosticToast(msg) {
-  console.log('[Diagnostic toast]', msg);
-  setTimeout(() => toast(msg), diagnosticToastDelay);
-  diagnosticToastDelay += 1200;
-  setTimeout(() => { diagnosticToastDelay = 0; }, diagnosticToastDelay + 300);
+function updateDebugIndicator(eventName, details) {
+  const el = document.getElementById('debug-indicator');
+  if (!el) return;
+  const now = new Date().toLocaleTimeString();
+  const detailText = details
+    ? Object.entries(details).map(([key, value]) => `${key}: ${value}`).join('\n')
+    : '';
+  el.textContent = `Último evento: ${eventName}\nHora: ${now}${detailText ? '\n' + detailText : ''}`;
 }
 function showLoader(msg) {
   document.getElementById('loader-text').textContent = msg || 'Procesando...';
@@ -1428,22 +1420,22 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
   console.log('[PWA install] beforeinstallprompt fired', e);
-  diagnosticToast('PWA: beforeinstallprompt fired');
   e.preventDefault(); deferredInstallPrompt = e;
   console.log('[PWA install] deferredInstallPrompt saved', deferredInstallPrompt);
-  diagnosticToast('PWA: deferredInstallPrompt guardado');
   document.getElementById('btn-install').style.display = '';
 });
 window.addEventListener('appinstalled', () => {
   console.log('[PWA install] appinstalled fired');
-  diagnosticToast('PWA: appinstalled fired');
   deferredInstallPrompt = null;
   document.getElementById('btn-install').style.display = 'none';
   toast('App instalada correctamente');
 });
 function installPWA() {
+  updateDebugIndicator('installPWA()', {
+    deferredInstallPrompt: deferredInstallPrompt ? 'exists' : 'null',
+    activeElementId: document.activeElement?.id || 'sin-id'
+  });
   console.log('[PWA install] install button clicked');
-  diagnosticToast('PWA: installPWA() ejecutada');
   console.log('[PWA install] installPWA() called', {
     activeElementId: document.activeElement?.id || null,
     activeElementTag: document.activeElement?.tagName || null,
@@ -1453,38 +1445,30 @@ function installPWA() {
   console.log('[PWA install] deferredInstallPrompt:', deferredInstallPrompt);
   if (!deferredInstallPrompt) {
     console.log('[PWA install] deferredInstallPrompt is null');
-    diagnosticToast('PWA: deferredInstallPrompt es null');
     toast('Usá "Agregar a pantalla de inicio" en el menú del navegador');
     return;
   }
   console.log('[PWA install] deferredInstallPrompt exists');
-  diagnosticToast('PWA: deferredInstallPrompt existe');
   try {
     console.log('[PWA install] calling prompt()');
-    diagnosticToast('PWA: ejecutando prompt()');
     deferredInstallPrompt.prompt();
   } catch (e) {
     console.error('[PWA install] prompt() failed', e);
-    diagnosticToast('PWA: prompt() fallo');
     throw e;
   }
   deferredInstallPrompt.userChoice.then(choice => {
     console.log('[PWA install] userChoice resolved', choice);
     if (choice && choice.outcome === 'accepted') {
       console.log('[PWA install] userChoice outcome: accepted');
-      diagnosticToast('PWA: userChoice accepted');
     } else if (choice && choice.outcome === 'dismissed') {
       console.log('[PWA install] userChoice outcome: dismissed');
-      diagnosticToast('PWA: userChoice dismissed');
     } else {
       console.log('[PWA install] userChoice outcome:', choice?.outcome);
-      diagnosticToast(`PWA: userChoice outcome=${choice?.outcome || 'desconocido'}`);
     }
     deferredInstallPrompt = null;
     document.getElementById('btn-install').style.display = 'none';
   }).catch(e => {
     console.error('[PWA install] userChoice failed', e);
-    diagnosticToast('PWA: userChoice fallo');
   });
 }
 
@@ -1497,7 +1481,10 @@ if (installButtonForDiagnostics) {
       currentTargetId: e.currentTarget?.id || null,
       pointerEvents: getComputedStyle(e.currentTarget).pointerEvents
     });
-    diagnosticToast(`PWA: btn-install touchstart target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
+    updateDebugIndicator('btn-install touchstart', {
+      target: e.target?.id || e.target?.tagName || 'sin-id',
+      currentTarget: e.currentTarget?.id || 'sin-id'
+    });
   }, { passive: true });
   installButtonForDiagnostics.addEventListener('click', e => {
     console.log('[PWA install] btn-install click listener capture', {
@@ -1508,7 +1495,10 @@ if (installButtonForDiagnostics) {
       eventPhase: e.eventPhase,
       stack: new Error().stack
     });
-    diagnosticToast(`PWA: btn-install click capture target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
+    updateDebugIndicator('btn-install click capture', {
+      target: e.target?.id || e.target?.tagName || 'sin-id',
+      defaultPrevented: e.defaultPrevented
+    });
   }, true);
   installButtonForDiagnostics.addEventListener('click', e => {
     console.log('[PWA install] btn-install click listener bubble', {
@@ -1518,9 +1508,33 @@ if (installButtonForDiagnostics) {
       defaultPrevented: e.defaultPrevented,
       eventPhase: e.eventPhase
     });
-    diagnosticToast(`PWA: btn-install click bubble target=${e.target?.id || e.target?.tagName || 'sin-id'}`);
+    updateDebugIndicator('btn-install click bubble', {
+      target: e.target?.id || e.target?.tagName || 'sin-id',
+      defaultPrevented: e.defaultPrevented
+    });
   });
 }
+
+function bindDebugTarget(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('touchstart', e => {
+    updateDebugIndicator(`${id} touchstart`, {
+      target: e.target?.id || e.target?.tagName || 'sin-id',
+      currentTarget: e.currentTarget?.id || 'sin-id'
+    });
+  }, { passive: true });
+  el.addEventListener('click', e => {
+    updateDebugIndicator(`${id} click`, {
+      target: e.target?.id || e.target?.tagName || 'sin-id',
+      defaultPrevented: e.defaultPrevented
+    });
+  }, true);
+}
+
+bindDebugTarget('btn-upload');
+bindDebugTarget('sheet-upload-btn');
+bindDebugTarget('btn-scan');
 
 if ('serviceWorker' in navigator) {
   let swRefreshing = false;

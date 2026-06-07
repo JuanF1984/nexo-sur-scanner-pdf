@@ -1353,20 +1353,54 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ─── PWA ─────────────────────────────────────────────────
 let deferredInstallPrompt = null;
 window.addEventListener('beforeinstallprompt', e => {
+  console.log('[PWA install] beforeinstallprompt fired', e);
   e.preventDefault(); deferredInstallPrompt = e;
+  console.log('[PWA install] deferredInstallPrompt saved', deferredInstallPrompt);
   document.getElementById('btn-install').style.display = '';
 });
 window.addEventListener('appinstalled', () => {
+  console.log('[PWA install] appinstalled fired');
   deferredInstallPrompt = null;
   document.getElementById('btn-install').style.display = 'none';
   toast('App instalada correctamente');
 });
 function installPWA() {
-  if (!deferredInstallPrompt) { toast('Usá "Agregar a pantalla de inicio" en el menú del navegador'); return; }
-  deferredInstallPrompt.prompt();
-  deferredInstallPrompt.userChoice.then(() => {
+  console.log('[PWA install] install button clicked');
+  console.log('[PWA install] deferredInstallPrompt:', deferredInstallPrompt);
+  if (!deferredInstallPrompt) {
+    console.log('[PWA install] deferredInstallPrompt is null');
+    toast('Diagnostico: deferredInstallPrompt es null');
+    toast('Usá "Agregar a pantalla de inicio" en el menú del navegador');
+    return;
+  }
+  console.log('[PWA install] deferredInstallPrompt exists');
+  toast('Diagnostico: deferredInstallPrompt existe');
+  try {
+    console.log('[PWA install] calling prompt()');
+    toast('Diagnostico: ejecutando prompt()');
+    deferredInstallPrompt.prompt();
+  } catch (e) {
+    console.error('[PWA install] prompt() failed', e);
+    toast('Diagnostico: prompt() fallo');
+    throw e;
+  }
+  deferredInstallPrompt.userChoice.then(choice => {
+    console.log('[PWA install] userChoice resolved', choice);
+    if (choice && choice.outcome === 'accepted') {
+      console.log('[PWA install] userChoice outcome: accepted');
+      toast('Diagnostico: userChoice accepted');
+    } else if (choice && choice.outcome === 'dismissed') {
+      console.log('[PWA install] userChoice outcome: dismissed');
+      toast('Diagnostico: userChoice dismissed');
+    } else {
+      console.log('[PWA install] userChoice outcome:', choice?.outcome);
+      toast('Diagnostico: userChoice sin outcome conocido');
+    }
     deferredInstallPrompt = null;
     document.getElementById('btn-install').style.display = 'none';
+  }).catch(e => {
+    console.error('[PWA install] userChoice failed', e);
+    toast('Diagnostico: userChoice fallo');
   });
 }
 

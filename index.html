@@ -120,7 +120,7 @@
 
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:24px;font-size:14px;transition:transform .3s;z-index:999;white-space:nowrap}
   .toast.show{transform:translateX(-50%) translateY(0)}
-  .debug-indicator{position:fixed;left:8px;right:8px;bottom:8px;z-index:10000;background:rgba(0,0,0,.86);border:1px solid #ffb84f;color:#fff;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;pointer-events:none;white-space:pre-wrap}
+  .debug-indicator{position:fixed;left:8px;right:8px;bottom:8px;max-height:42vh;overflow:auto;z-index:10000;background:rgba(0,0,0,.86);border:1px solid #ffb84f;color:#fff;padding:8px 10px;border-radius:8px;font-size:10px;line-height:1.35;pointer-events:none;white-space:pre-wrap}
 
   .loader-overlay{position:fixed;inset:0;background:rgba(15,17,23,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:998;opacity:0;pointer-events:none;transition:opacity .2s}
   .loader-overlay.show{opacity:1;pointer-events:all}
@@ -353,6 +353,7 @@ let cvLoading = false;
 let allowFileInput = false;
 let allowedFileInputSource = null;
 let allowFileInputTimer = null;
+let debugEvents = [];
 // ─── OPENCV LAZY LOAD ────────────────────────────────────
 function setCVBadge(state, text) {
   const b = document.getElementById('cv-badge');
@@ -1405,9 +1406,14 @@ function updateDebugIndicator(eventName, details) {
   if (!el) return;
   const now = new Date().toLocaleTimeString();
   const detailText = details
-    ? Object.entries(details).map(([key, value]) => `${key}: ${value}`).join('\n')
+    ? Object.entries(details)
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => `${key}=${value}`)
+        .join(' | ')
     : '';
-  el.textContent = `Último evento: ${eventName}\nHora: ${now}${detailText ? '\n' + detailText : ''}`;
+  debugEvents.unshift(`${now} - ${eventName}${detailText ? ' - ' + detailText : ''}`);
+  debugEvents = debugEvents.slice(0, 20);
+  el.textContent = debugEvents.map((entry, index) => `${index + 1}. ${entry}`).join('\n');
 }
 function showLoader(msg) {
   document.getElementById('loader-text').textContent = msg || 'Procesando...';
@@ -1482,8 +1488,9 @@ if (installButtonForDiagnostics) {
       pointerEvents: getComputedStyle(e.currentTarget).pointerEvents
     });
     updateDebugIndicator('btn-install touchstart', {
-      target: e.target?.id || e.target?.tagName || 'sin-id',
-      currentTarget: e.currentTarget?.id || 'sin-id'
+      targetId: e.target?.id || 'sin-id',
+      targetTagName: e.target?.tagName || 'sin-tag',
+      currentTargetId: e.currentTarget?.id || 'sin-id'
     });
   }, { passive: true });
   installButtonForDiagnostics.addEventListener('click', e => {
@@ -1496,7 +1503,8 @@ if (installButtonForDiagnostics) {
       stack: new Error().stack
     });
     updateDebugIndicator('btn-install click capture', {
-      target: e.target?.id || e.target?.tagName || 'sin-id',
+      targetId: e.target?.id || 'sin-id',
+      targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
   }, true);
@@ -1509,7 +1517,8 @@ if (installButtonForDiagnostics) {
       eventPhase: e.eventPhase
     });
     updateDebugIndicator('btn-install click bubble', {
-      target: e.target?.id || e.target?.tagName || 'sin-id',
+      targetId: e.target?.id || 'sin-id',
+      targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
   });
@@ -1520,13 +1529,15 @@ function bindDebugTarget(id) {
   if (!el) return;
   el.addEventListener('touchstart', e => {
     updateDebugIndicator(`${id} touchstart`, {
-      target: e.target?.id || e.target?.tagName || 'sin-id',
-      currentTarget: e.currentTarget?.id || 'sin-id'
+      targetId: e.target?.id || 'sin-id',
+      targetTagName: e.target?.tagName || 'sin-tag',
+      currentTargetId: e.currentTarget?.id || 'sin-id'
     });
   }, { passive: true });
   el.addEventListener('click', e => {
     updateDebugIndicator(`${id} click`, {
-      target: e.target?.id || e.target?.tagName || 'sin-id',
+      targetId: e.target?.id || 'sin-id',
+      targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
   }, true);

@@ -22,6 +22,7 @@
 
   .screen{position:fixed;inset:0;height:100dvh;display:flex;flex-direction:column;transition:opacity .25s,transform .25s}
   .screen.hidden{opacity:0;pointer-events:none;transform:translateY(16px)}
+  .screen.hidden *{pointer-events:none}
 
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0}
   .topbar-title{font-size:17px;font-weight:600;letter-spacing:.3px}
@@ -118,8 +119,8 @@
   .success-title{font-size:22px;font-weight:700}
   .success-actions{width:100%;max-width:320px;display:flex;flex-direction:column;gap:10px}
 
-  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:24px;font-size:14px;transition:transform .3s;z-index:999;white-space:nowrap}
-  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:24px;font-size:14px;transition:transform .3s;z-index:999;white-space:nowrap;pointer-events:none}
+  .toast.show{transform:translateX(-50%) translateY(0);pointer-events:auto}
   .debug-indicator{position:fixed;left:8px;right:8px;top:8px;max-height:42vh;overflow:auto;z-index:10000;background:rgba(0,0,0,.86);border:1px solid #ffb84f;color:#fff;padding:8px 10px;border-radius:8px;font-size:10px;line-height:1.35;pointer-events:none;white-space:pre-wrap}
 
   .loader-overlay{position:fixed;inset:0;background:rgba(15,17,23,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:998;opacity:0;pointer-events:none;transition:opacity .2s}
@@ -133,7 +134,8 @@
 
   /* Bottom sheet — agregar página */
   #add-page-sheet{position:fixed;inset:0;z-index:1000}
-  #add-page-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+  #add-page-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6);transition:opacity .3s}
+  #add-page-sheet:not(.open) #add-page-backdrop{opacity:0;pointer-events:none}
   #add-page-panel{
     position:absolute;bottom:0;left:0;right:0;
     background:var(--surface);border-radius:20px 20px 0 0;
@@ -407,6 +409,7 @@ function showScreen(id) {
   updateDebugIndicator('showScreen()', { id });
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
   document.getElementById(id).classList.remove('hidden');
+  if (id === 'screen-home') requestAnimationFrame(() => inspectBottomButtonHitTarget('showScreen screen-home'));
 }
 function goHome() {
   stopCamera();
@@ -1424,6 +1427,35 @@ function updateDebugIndicator(eventName, details) {
   debugEvents = debugEvents.slice(0, 20);
   el.textContent = debugEvents.map((entry, index) => `${index + 1}. ${entry}`).join('\n');
 }
+
+function inspectBottomButtonHitTarget(context) {
+  const candidates = ['btn-upload', 'btn-clear', 'btn-pdf', 'btn-scan', 'btn-install']
+    .map(id => document.getElementById(id))
+    .filter(el => el && getComputedStyle(el).display !== 'none');
+  const btn = candidates[candidates.length - 1];
+  if (!btn) {
+    updateDebugIndicator('elementFromPoint()', { context, result: 'sin-boton-visible' });
+    return;
+  }
+  const rect = btn.getBoundingClientRect();
+  const x = Math.round(rect.left + rect.width / 2);
+  const y = Math.round(rect.top + rect.height / 2);
+  const hit = document.elementFromPoint(x, y);
+  const camBottom = document.querySelector('.cam-bottom');
+  const camBottomStyle = camBottom ? getComputedStyle(camBottom) : null;
+  updateDebugIndicator('elementFromPoint()', {
+    context,
+    buttonId: btn.id || 'sin-id',
+    x,
+    y,
+    hitId: hit?.id || 'sin-id',
+    hitTag: hit?.tagName || 'sin-tag',
+    hitClass: hit?.className || 'sin-class',
+    camBottomDisplay: camBottomStyle?.display || 'sin-cam-bottom',
+    camBottomPointer: camBottomStyle?.pointerEvents || 'sin-cam-bottom',
+    screenCameraClass: document.getElementById('screen-camera')?.className || 'sin-screen-camera'
+  });
+}
 function showLoader(msg) {
   document.getElementById('loader-text').textContent = msg || 'Procesando...';
   document.getElementById('loader').classList.add('show');
@@ -1501,6 +1533,7 @@ if (installButtonForDiagnostics) {
       targetTagName: e.target?.tagName || 'sin-tag',
       currentTargetId: e.currentTarget?.id || 'sin-id'
     });
+    inspectBottomButtonHitTarget('btn-install touchstart');
   }, { passive: true });
   installButtonForDiagnostics.addEventListener('click', e => {
     console.log('[PWA install] btn-install click listener capture', {
@@ -1516,6 +1549,7 @@ if (installButtonForDiagnostics) {
       targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
+    inspectBottomButtonHitTarget('btn-install click capture');
   }, true);
   installButtonForDiagnostics.addEventListener('click', e => {
     console.log('[PWA install] btn-install click listener bubble', {
@@ -1530,6 +1564,7 @@ if (installButtonForDiagnostics) {
       targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
+    inspectBottomButtonHitTarget('btn-install click bubble');
   });
 }
 
@@ -1542,6 +1577,7 @@ function bindDebugTarget(id) {
       targetTagName: e.target?.tagName || 'sin-tag',
       currentTargetId: e.currentTarget?.id || 'sin-id'
     });
+    inspectBottomButtonHitTarget(`${id} touchstart`);
   }, { passive: true });
   el.addEventListener('click', e => {
     updateDebugIndicator(`${id} click`, {
@@ -1549,6 +1585,7 @@ function bindDebugTarget(id) {
       targetTagName: e.target?.tagName || 'sin-tag',
       defaultPrevented: e.defaultPrevented
     });
+    inspectBottomButtonHitTarget(`${id} click`);
   }, true);
 }
 
